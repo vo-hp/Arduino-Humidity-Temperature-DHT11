@@ -12,35 +12,11 @@ unsigned long previousReadMillis = 0;
 unsigned long previousLcdMillis = 0;
 unsigned long previousBlinkMillis = 0;
 unsigned long currentMillis;
-unsigned long currentBlinkMillis;
 
 bool wasBlink = false;
 int blinkCount = 0;
 int a = 0;
 
-// void lcdBlink() {
-//   currentMillis = millis();
-//   if (currentMillis - previousBlinkMillis >= 100) {
-//     previousBlinkMillis = millis();
-//     if (not wasBlink) {
-//       if (blinkCount <= 20) {
-//         if (a == 0) {
-//           lcd.noBacklight();
-//           a = 1;
-//           Serial.println("tat");
-//         } else {
-//           lcd.backlight();
-//           a = 0;
-//           Serial.println("bat");
-//         }
-//         blinkCount++;
-//         if (blinkCount == 10) {
-//           wasBlink = true;
-//         }
-//       }
-//     }
-//   }
-// }
 
 void read() {
   lcd.setCursor(0, 1);
@@ -75,9 +51,8 @@ void loop() {
     if (DHT.humidity >= 90) {
       lcd.setCursor(0, 0);
       lcd.print("warning");
-      // lcdBlink();
       if (not wasBlink) {
-        if (blinkCount <= 20) {
+        if (blinkCount <= 8) {
           if (a == 0) {
             lcd.noBacklight();
             a = 1;
@@ -88,7 +63,7 @@ void loop() {
             Serial.println("bat");
           }
           blinkCount++;
-          if (blinkCount == 20) {
+          if (blinkCount == 8) {
             wasBlink = true;
           }
         }

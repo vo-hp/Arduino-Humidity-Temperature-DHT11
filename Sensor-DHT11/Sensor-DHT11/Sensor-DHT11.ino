@@ -48,7 +48,7 @@ void loop() {
   }
   if (currentMillis - previousLcdMillis >= 100) {
     previousLcdMillis = millis();
-    if (DHT.humidity >= 90) {
+    if (DHT.humidity >= 80) {
       lcd.setCursor(0, 0);
       lcd.print("warning");
       if (not wasBlink) {

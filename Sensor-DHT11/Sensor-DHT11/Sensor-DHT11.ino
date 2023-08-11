@@ -7,30 +7,94 @@ DFRobot_DHT11 DHT;
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-const long interval = 1000;
-unsigned long previousReadMillis = 0;
-unsigned long previousLcdMillis = 0;
-unsigned long previousBlinkMillis = 0;
-unsigned long currentMillis;
 
-bool wasBlink = false;
-int blinkCount = 0;
-int a = 0;
+const unsigned long INTERVAL_READSENSOR = 1000;
+unsigned long currentMillisReadSensor;
+unsigned long previousMillisReadSensor = 0;
+
+const unsigned long INTERVAL_BLINKLCD = 300;
+unsigned long previousMillisBlinkLcd = 0;
+unsigned long currentMillisBlinkLcd;
 
 
-void read() {
-  lcd.setCursor(0, 1);
-  lcd.print("temp:");
-  lcd.setCursor(5, 1);
-  lcd.print(DHT.temperature);
-  lcd.setCursor(8, 1);
-  lcd.print("humi:");
-  lcd.setCursor(13, 1);
-  lcd.print(DHT.humidity);
-  Serial.print("temp: ");
-  Serial.println(DHT.temperature);
-  Serial.print("humi: ");
-  Serial.println(DHT.humidity);
+const int HUMI_THRESHOLD = 80;
+bool isHumiHigherThanThreshold = false;
+bool isLcdBlink = false;
+bool wasLcdOn = false;
+bool isSensorValueChanged = false;
+bool wasLcdWarning = false;
+
+void readSensor() {
+  currentMillisReadSensor = millis();
+  if (currentMillisReadSensor - previousMillisReadSensor >= INTERVAL_READSENSOR) {
+    previousMillisReadSensor = millis();
+    DHT.read(DHT11_PIN);
+    isSensorValueChanged = true;
+    Serial.print("temp: ");
+    Serial.println(DHT.temperature);
+    Serial.print("humi: ");
+    Serial.println(DHT.humidity);
+  }
+}
+
+void printLcd() {
+  if (isSensorValueChanged) {
+    lcd.setCursor(0, 1);
+    lcd.print("temp:");
+    lcd.setCursor(5, 1);
+    lcd.print(DHT.temperature);
+    lcd.setCursor(8, 1);
+    lcd.print("humi:");
+    lcd.setCursor(13, 1);
+    lcd.print(DHT.humidity);
+    isSensorValueChanged = false;
+  }
+}
+
+void checkHumidity() {
+  if (DHT.humidity >= HUMI_THRESHOLD) {
+    lcdPrintWarning();
+    blinkLcd();
+  } else {
+    if (wasLcdWarning) {
+      lcdClearWarning();
+    }
+    if (not wasLcdOn) {
+      lcd.backlight();
+    }
+  }
+}
+
+void blinkLcd() {
+  currentMillisBlinkLcd = millis();
+  if (currentMillisBlinkLcd - previousMillisBlinkLcd >= INTERVAL_BLINKLCD) {
+    previousMillisBlinkLcd = currentMillisBlinkLcd;
+    if (wasLcdOn) {
+      lcd.noBacklight();
+      wasLcdOn = false;
+      Serial.println("tat");
+    } else {
+      lcd.backlight();
+      wasLcdOn = true;
+      Serial.println("bat");
+    }
+  }
+}
+
+
+void lcdPrintWarning() {
+  if (not wasLcdWarning) {
+    lcd.setCursor(0, 0);
+    lcd.print("warning");
+    wasLcdWarning = true;
+  }
+}
+
+void lcdClearWarning() {
+  if (wasLcdWarning) {
+    lcd.setCursor(0, 0);
+    lcd.print("       ");
+  }
 }
 
 void setup() {
@@ -40,40 +104,7 @@ void setup() {
 }
 
 void loop() {
-  currentMillis = millis();
-  if (currentMillis - previousReadMillis >= interval) {
-    previousReadMillis = millis();
-    DHT.read(DHT11_PIN);
-    read();
-  }
-  if (currentMillis - previousLcdMillis >= 100) {
-    previousLcdMillis = millis();
-    if (DHT.humidity >= 80) {
-      lcd.setCursor(0, 0);
-      lcd.print("warning");
-      if (not wasBlink) {
-        if (blinkCount <= 8) {
-          if (a == 0) {
-            lcd.noBacklight();
-            a = 1;
-            Serial.println("tat");
-          } else {
-            lcd.backlight();
-            a = 0;
-            Serial.println("bat");
-          }
-          blinkCount++;
-          if (blinkCount == 8) {
-            wasBlink = true;
-          }
-        }
-      }  
-    }  
-    else {
-      lcd.setCursor(0, 0);
-      lcd.print("       ");
-      wasBlink = false; 
-      blinkCount = 0;
-    }
-  }
+  readSensor();
+  printLcd();
+  checkHumidity();
 }
